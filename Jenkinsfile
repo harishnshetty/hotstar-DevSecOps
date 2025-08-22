@@ -19,7 +19,7 @@ pipeline {
 
         stage("Git Checkout") {
             steps {
-                git branch: 'main', url: 'https://github.com/harishnshetty/hotstar.git'
+                git branch: 'main', url: 'https://github.com/harishnshetty/hotstar-DevSecOps.git'
             }
         }
 
@@ -36,9 +36,12 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
+                    timeout(time: 3, unit: 'MINUTES') {
+                  
                     waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
                 }
             }
+        }
         }
 
         stage("Install NPM Dependencies") {
@@ -47,24 +50,15 @@ pipeline {
             }
         }
         
-        // stage("OWASP FS Scan") {
-        //     steps {
-        //         dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
-        //                         odcInstallation: 'dp-check'
-        //         dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-        //     }
-        // }  
-
-        
-        // https://nvd.nist.gov/developers/request-an-api-key  [request an API key]
+       
         stage("OWASP FS Scan") {
             steps {
                 dependencyCheck additionalArguments: '''
                     --scan ./ 
                     --disableYarnAudit 
                     --disableNodeAudit 
-                    --nvdApiKey 788b28b3-e0a8-4fcf-a6c7-a6c4b772d8a7  
-                    ''',
+                
+                   ''',
                 odcInstallation: 'dp-check'
 
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
@@ -133,7 +127,7 @@ pipeline {
             steps {
                 script {
                     sh "docker rm -f hotstar || true"
-                    sh "docker run -d --name hotstar -p 80:3000 ${env.IMAGE_TAG}"
+                    sh "docker run -d --name hotstar -p 80:80 ${env.IMAGE_TAG}"
                 }
             }
         }
@@ -148,7 +142,7 @@ pipeline {
             emailext (
                 subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: """
-                    <p>This is a Jenkins hotstar CICD pipeline status.</p>
+                    <p>This is a Jenkins Hotstar CICD pipeline status.</p>
                     <p>Project: ${env.JOB_NAME}</p>
                     <p>Build Number: ${env.BUILD_NUMBER}</p>
                     <p>Build Status: ${buildStatus}</p>
