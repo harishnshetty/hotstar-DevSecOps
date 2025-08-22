@@ -71,7 +71,7 @@ spec:
   ingressClassName: alb
   rules:
     # Android store domain
-    - host: amazon.harishshetty.xyz
+    - host: hotstar.harishshetty.xyz
       http:
         paths:
           - path: /
