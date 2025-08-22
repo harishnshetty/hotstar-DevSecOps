@@ -623,7 +623,7 @@ kubectl get deployment -n kube-system aws-load-balancer-controller
 ```bash
 
 git clone https://github.com/harishnshetty/hotstar-DevSecOps.git
-cd amazon-hotstar-DevSecOps
+# cd hotstar-DevSecOps
 
 kubectl apply -f .
 kubectl config set-context --current --namespace=hotstar-ns
