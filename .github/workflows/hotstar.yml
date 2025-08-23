@@ -1,0 +1,121 @@
+name: DevSecOps CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  devsecops:
+    runs-on: self-hosted   # 👈 self-hosted runner with Docker + Trivy installed
+    env:
+      IMAGE_NAME: harishnshetty/hotstar
+      IMAGE_TAG: harishnshetty/hotstar:${{ github.run_number }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch all history for accurate analysis
+   
+      # ------------------------------
+      # 1. Static Analysis (SonarQube)
+      # ------------------------------
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: npm install dependencies
+        run: npm install
+
+            
+
+      # ------------------------------
+      # 2. Trivy File System Scan
+      # ------------------------------
+      - name: Trivy FS Scan
+        run: |
+          echo "🔍 Running Trivy FS Scan..."
+          trivy fs . > trivy-fs.txt
+
+
+      # ------------------------------
+      # 4. Build Docker Image
+      # ------------------------------
+      - name: Build Docker Image
+        run: |
+          docker rmi -f hotstar $IMAGE_TAG || true
+          docker build --no-cache -t hotstar .
+
+      # ------------------------------
+      # 5. Tag & Push to DockerHub
+      # ------------------------------
+      - name: DockerHub Login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u harishnshetty --password-stdin
+
+      - name: Tag & Push Docker Image
+        run: |
+          docker tag hotstar $IMAGE_TAG
+          docker push $IMAGE_TAG
+
+          # also push latest
+          docker tag hotstar $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest
+
+      # ------------------------------
+      # 6. Trivy Image Scan
+      # ------------------------------
+      - name: Trivy Image Scan
+        run: |
+          echo "🔍 Running Trivy scan on $IMAGE_TAG"
+
+          # JSON report
+          trivy image -f json -o trivy-image.json $IMAGE_TAG
+
+          # Table report
+          trivy image -f table -o trivy-image.txt $IMAGE_TAG
+
+          # Fail pipeline if HIGH/CRITICAL found
+          trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE_TAG || true
+
+      # ------------------------------
+      # 7. Deploy to Container
+      # ------------------------------
+      - name: Deploy Container
+        run: |
+          docker rm -f hotstar || true
+          docker run -d --name hotstar -p 80:80 $IMAGE_TAG
+
+      # ------------------------------
+      # 8. Upload Security Reports
+      # ------------------------------
+      - name: Upload Scan Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports
+          path: |
+            trivy-fs.txt
+            trivy-image.json
+            trivy-image.txt
+
+      # ------------------------------
+      # 9. Gmail Notification
+      # ------------------------------
+      - name: Send Gmail Notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASS }}
+          subject: "DevSecOps Pipeline - ${{ job.status }}"
+          body: |
+            DevSecOps Workflow finished with status: ${{ job.status }}
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+          to: "harish622@gmail.com"
+          from: "DevSecOps Bot <${{ secrets.GMAIL_USER }}>"
