@@ -7,7 +7,10 @@
 | SSH             | 22    |
 | SonarQube       | 9000  |
 
-
+```bash
+sudo apt-get update
+sudo apt-get install -y unzip
+```
 ## Java
 
 Install OpenJDK (choose 17 or 21 depending on your needs):
