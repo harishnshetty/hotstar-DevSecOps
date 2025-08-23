@@ -1,3 +1,13 @@
+## Ports to Enable in Security Group
+
+| Service         | Port  |
+|-----------------|-------|
+| HTTP            | 80    |
+| HTTPS           | 443   |
+| SSH             | 22    |
+| SonarQube       | 9000  |
+
+
 ## Java
 
 Install OpenJDK (choose 17 or 21 depending on your needs):
@@ -43,11 +53,7 @@ sudo usermod -aG docker $USER
 newgrp docker
 docker ps
 ```
-If Jenkins needs Docker access:
-```bash
-sudo usermod -aG docker jenkins
-sudo systemctl restart jenkins
-```
+
 Check Docker status:
 ```bash
 sudo systemctl status docker
